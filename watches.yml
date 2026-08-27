@@ -16,21 +16,12 @@ defaults:
   priority: 4                             # priorite ntfy, de 1 (discret) a 5 (urgent)
 
 watches:
-  - name: "Paris vers Bordeaux, vendredi soir"
-    from: ["PARIS (intramuros)"]
-    to: ["BORDEAUX ST JEAN"]
-    dates:
-      relative_days: [0, 31]              # fenetre glissante : aujourd'hui a J+31
-      weekdays: [fri]
-    depart_between: ["16:00", "21:30"]
-    max_changes: 1
-    enabled: false                         # exemple : passez a true pour l'activer
-
-  - name: "Retour Bordeaux vers Paris, dimanche"
-    from: ["BORDEAUX ST JEAN"]
-    to: ["PARIS (intramuros)", "MASSY TGV"]
-    dates:
-      relative_days: [0, 31]
-      weekdays: [sun]
-    depart_between: ["15:00", "22:00"]
-    enabled: false
+    - name: "TOULOUSE MATABIAU vers PARIS (intramuros)"
+      from: ["TOULOUSE MATABIAU"]
+      to: ["PARIS (intramuros)"]
+      dates:
+        from: "2026-08-30"
+        to: "2026-08-30"
+      max_changes: 2
+      priority: 5
+      enabled: true
