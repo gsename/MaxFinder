@@ -1,0 +1,6 @@
+# Le depot stocke tout en LF : la CI et le deploiement tournent sous Linux,
+# et cela evite des diffs entiers a chaque aller-retour Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

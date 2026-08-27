@@ -1,0 +1,42 @@
+{
+  "name": "maxfinder",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Recherche de trains TGVmax (MAX JEUNE / MAX SENIOR) et alertes de disponibilite, 100% statique sur GitHub Pages.",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sync": "tsx scripts/sync.ts",
+    "sync:local": "tsx scripts/sync.ts --force --no-notify",
+    "watches:check": "tsx scripts/sync.ts --check-watches"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.1.11",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.0"
+  }
+}

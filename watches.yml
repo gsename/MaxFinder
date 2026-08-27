@@ -1,0 +1,36 @@
+# Regles de surveillance TGVmax.
+#
+# Le job GitHub Actions evalue ce fichier a chaque synchronisation et envoie une
+# notification ntfy pour chaque trajet nouvellement disponible.
+#
+# Le topic ntfy n'est PAS ici : il vit dans le secret de depot NTFY_TOPIC, car ce
+# depot est public et un topic connu peut etre lu et pollue par n'importe qui.
+#
+# Apres modification, verifiez la syntaxe avec :  npm run watches:check
+
+defaults:
+  max_changes: 0                          # 0 = directs seulement, 1 ou 2 pour accepter des correspondances
+  min_connection_minutes: 20              # correspondance minimale sur une gare ordinaire
+  city_transfer_connection_minutes: 60    # gares "(intramuros)" : transfert entre gares d'une meme ville
+  max_connection_wait_minutes: 240        # attente maximale toleree sur une correspondance
+  priority: 4                             # priorite ntfy, de 1 (discret) a 5 (urgent)
+
+watches:
+  - name: "Paris vers Bordeaux, vendredi soir"
+    from: ["PARIS (intramuros)"]
+    to: ["BORDEAUX ST JEAN"]
+    dates:
+      relative_days: [0, 31]              # fenetre glissante : aujourd'hui a J+31
+      weekdays: [fri]
+    depart_between: ["16:00", "21:30"]
+    max_changes: 1
+    enabled: false                         # exemple : passez a true pour l'activer
+
+  - name: "Retour Bordeaux vers Paris, dimanche"
+    from: ["BORDEAUX ST JEAN"]
+    to: ["PARIS (intramuros)", "MASSY TGV"]
+    dates:
+      relative_days: [0, 31]
+      weekdays: [sun]
+    depart_between: ["15:00", "22:00"]
+    enabled: false

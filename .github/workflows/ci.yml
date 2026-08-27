@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Types
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Validation de watches.yml
+        run: npm run watches:check
+      - name: Build
+        # Le build sans donnees prouve que le front compile ; la synchronisation
+        # reelle n'a pas sa place dans la CI de PR, elle appellerait l'API SNCF a
+        # chaque poussee.
+        run: npm run build
