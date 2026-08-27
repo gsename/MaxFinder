@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { WEEKDAY_KEYS, weekdayLabel } from '../../shared/dates'
+import { formatDateLabel, WEEKDAY_KEYS, weekdayLabel } from '../../shared/dates'
 import type { PlaceIndex } from '../../shared/places'
 import type { SearchQuery } from '../lib/query'
-import { draftFromQuery, watchesEditUrl, watchToYaml } from '../lib/watch-yaml'
+import {
+  describeScope,
+  draftFromQuery,
+  exactDates,
+  suggestedWeekday,
+  watchesEditUrl,
+  watchToYaml,
+  weekdaysApply,
+  type WatchScope,
+} from '../lib/watch-yaml'
 
 interface Props {
   query: SearchQuery
@@ -25,6 +34,8 @@ export function WatchDialog({ query, index, matchCount, onClose }: Props) {
 
   const yaml = useMemo(() => watchToYaml(query, draft, index), [query, draft, index])
   const editUrl = watchesEditUrl()
+  const dates = exactDates(query)
+  const showWeekdays = weekdaysApply(query, draft.scope)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -45,6 +56,21 @@ export function WatchDialog({ query, index, matchCount, onClose }: Props) {
     }
   }
 
+  const setScope = (scope: WatchScope) => {
+    setDraft((current) => {
+      if (scope === current.scope) return current
+      // En passant d une date unique a la surveillance continue, le jour de la
+      // semaine correspondant est la traduction naturelle du souhait : « le
+      // 30 aout » devient « tous les dimanches ». Suggere, jamais impose.
+      const suggestion = suggestedWeekday(query)
+      const weekdays =
+        scope === 'window' && current.weekdays.length === 0 && suggestion
+          ? [suggestion]
+          : current.weekdays
+      return { ...current, scope, weekdays }
+    })
+  }
+
   const toggleWeekday = (key: (typeof WEEKDAY_KEYS)[number]) => {
     setDraft((current) => ({
       ...current,
@@ -55,6 +81,23 @@ export function WatchDialog({ query, index, matchCount, onClose }: Props) {
           ),
     }))
   }
+
+  const scopeOptions: Array<{ key: WatchScope; label: string; hint: string }> = [
+    {
+      key: 'exact',
+      label:
+        dates.from === dates.to
+          ? `Le ${formatDateLabel(dates.from)}`
+          : `Du ${formatDateLabel(dates.from)} au ${formatDateLabel(dates.to)}`,
+      hint:
+        'Exactement les dates de votre recherche. L alerte s eteint d elle-meme une fois la periode passee.',
+    },
+    {
+      key: 'window',
+      label: 'En continu, sur 31 jours',
+      hint: 'Surveillance permanente de la fenetre publiee par la SNCF, pour un trajet regulier.',
+    },
+  ]
 
   return (
     <div
@@ -75,8 +118,9 @@ export function WatchDialog({ query, index, matchCount, onClose }: Props) {
           <div>
             <h2 className="text-lg font-semibold">Creer une alerte</h2>
             <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-              {matchCount} trajet{matchCount > 1 ? 's' : ''} correspondrait
-              {matchCount > 1 ? 'ent' : ''} a cette regle aujourd hui.
+              Votre recherche trouve actuellement {matchCount} trajet
+              {matchCount > 1 ? 's' : ''}.
+              {matchCount === 0 && ' Une alerte a zero trajet est le cas normal : elle existe pour vous prevenir quand cela changera.'}
             </p>
           </div>
           <button
@@ -89,7 +133,7 @@ export function WatchDialog({ query, index, matchCount, onClose }: Props) {
           </button>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-4">
           <label className="block">
             <span className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
               Nom de l alerte
@@ -107,45 +151,63 @@ export function WatchDialog({ query, index, matchCount, onClose }: Props) {
 
           <fieldset>
             <legend className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
-              Jours surveilles
+              Dates a surveiller
             </legend>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {WEEKDAY_KEYS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleWeekday(key)}
-                  aria-pressed={draft.weekdays.includes(key)}
-                  className={`rounded-lg border px-2.5 py-1 text-xs capitalize ${
-                    draft.weekdays.includes(key)
-                      ? 'border-indigo-500 bg-indigo-600 text-white'
-                      : 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+            <div className="mt-1 space-y-1.5">
+              {scopeOptions.map((option) => (
+                <label
+                  key={option.key}
+                  className={`flex cursor-pointer items-start gap-2 rounded-xl border p-2.5 ${
+                    draft.scope === option.key
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10'
+                      : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {weekdayLabel(key).slice(0, 3)}
-                </button>
+                  <input
+                    type="radio"
+                    name="watch-scope"
+                    checked={draft.scope === option.key}
+                    onChange={() => setScope(option.key)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium capitalize">{option.label}</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">
+                      {option.hint}
+                    </span>
+                  </span>
+                </label>
               ))}
             </div>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Aucun jour selectionne = tous les jours.
-            </p>
           </fieldset>
 
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={draft.useWindow}
-              onChange={(event) => setDraft({ ...draft, useWindow: event.target.checked })}
-              className="mt-0.5"
-            />
-            <span>
-              Surveiller en continu la fenetre glissante de 31 jours
-              <span className="block text-xs text-slate-500 dark:text-slate-400">
-                Decochez pour figer l alerte sur les dates choisies. Attention : une alerte sur une
-                date fixe s eteint des que cette date quitte la fenetre publiee par la SNCF.
-              </span>
-            </span>
-          </label>
+          {showWeekdays && (
+            <fieldset>
+              <legend className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                Restreindre a certains jours
+              </legend>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {WEEKDAY_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleWeekday(key)}
+                    aria-pressed={draft.weekdays.includes(key)}
+                    className={`rounded-lg border px-2.5 py-1 text-xs capitalize ${
+                      draft.weekdays.includes(key)
+                        ? 'border-indigo-500 bg-indigo-600 text-white'
+                        : 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {weekdayLabel(key).slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Aucun jour selectionne = tous les jours.
+              </p>
+            </fieldset>
+          )}
 
           <label className="block">
             <span className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
@@ -162,6 +224,11 @@ export function WatchDialog({ query, index, matchCount, onClose }: Props) {
               <option value={5}>5 — urgente</option>
             </select>
           </label>
+
+          <p className="rounded-xl bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
+            <strong className="font-semibold">Cette alerte surveillera :</strong>{' '}
+            {describeScope(query, draft)}
+          </p>
         </div>
 
         <div className="mt-4">
