@@ -67,7 +67,22 @@ async function main(): Promise<number> {
     }
     throw error
   }
-  console.log(`watches.yml : ${watches.length} regle(s), dont ${watches.filter((w) => w.enabled).length} active(s)`)
+  const actives = watches.filter((w) => w.enabled)
+  console.log(`watches.yml : ${watches.length} regle(s), dont ${actives.length} active(s)`)
+
+  // Sur un depot public, les logs d Actions sont publics : on ne journalise
+  // jamais le topic, seulement sa presence et sa longueur.
+  if (ntfy) {
+    console.log(`ntfy        : topic configure (${ntfy.topic.length} caracteres) sur ${ntfy.server}`)
+  } else {
+    console.log('ntfy        : AUCUN TOPIC (secret NTFY_TOPIC absent) : aucune alerte ne partira')
+  }
+  if (actives.length === 0) {
+    console.log(
+      'ATTENTION   aucune regle active : cette execution ne peut envoyer aucune alerte,' +
+        ' quoi qu il arrive. Passez une regle a "enabled: true" dans watches.yml.',
+    )
+  }
 
   if (flags.checkWatchesOnly) {
     console.log('Validation seule demandee, arret ici.')

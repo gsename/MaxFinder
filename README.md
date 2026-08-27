@@ -93,9 +93,33 @@ watches:
 Vérifiez avant de pousser :
 
 ```bash
+npm run doctor            # diagnostic complet de la chaîne d'alerte
 npm run watches:check     # syntaxe et schéma seulement
 npm run watches:preview   # ce que chaque règle enverrait, sur les données locales
 ```
+
+### « Je ne reçois rien »
+
+```bash
+NTFY_TOPIC="votre-topic" npm run doctor
+```
+
+`doctor` publie un message **puis le relit sur le serveur** : c'est la relecture qui prouve
+l'acheminement, un POST accepté ne dit rien de ce qui a réellement été enregistré. Il vérifie
+ensuite la validité de `watches.yml`, le nombre de règles actives, et ce que chacune
+déclencherait.
+
+Les deux causes les plus fréquentes ne sont pas des pannes :
+
+| Symptôme | Cause |
+| --- | --- |
+| Le run est vert, rien n'est parti | Aucune règle `enabled: true`, ou dataset inchangé donc arrêt immédiat |
+| `doctor` est tout vert, le téléphone reste muet | Le secret dit *où publier*, il ne vous **abonne** à rien |
+| Une règle surveille 0 trajet | Normal : l'alerte existe pour vous prévenir quand cela changera |
+
+Pour forcer une exécution complète : `Actions → Run workflow`, cocher **`force`**. Sans cette
+case, un dataset inchangé fait sortir le job immédiatement — c'est voulu, et cela ressemble à une
+panne. Cocher **`notify_test`** n'envoie qu'un message de contrôle.
 
 `watches:preview` répond à la vraie question — « cette règle va-t-elle déclencher, et sur
 quoi ? ». Il liste les dates surveillées, les trajets qui correspondent déjà, et signale les
@@ -199,6 +223,7 @@ jamais de conversion de fuseau ; seul le cron est en UTC.
 | `scripts/sync.ts` | Orchestrateur appelé par GitHub Actions |
 | `scripts/query.ts` | CLI d'interrogation locale |
 | `scripts/watch-preview.ts` | Prévisualisation des alertes sans rien envoyer |
+| `scripts/doctor.ts` | Diagnostic de la chaîne d'alerte, avec preuve de livraison |
 | `src/` | Interface React |
 
 `shared/watch.ts` est délibérément commun aux deux mondes : la même fonction décide ce qu'une

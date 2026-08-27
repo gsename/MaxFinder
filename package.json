@@ -17,7 +17,8 @@
     "sync": "tsx scripts/sync.ts",
     "sync:local": "tsx scripts/sync.ts --force --no-notify",
     "watches:check": "tsx scripts/sync.ts --check-watches",
-    "watches:preview": "tsx scripts/watch-preview.ts"
+    "watches:preview": "tsx scripts/watch-preview.ts",
+    "doctor": "tsx scripts/doctor.ts"
   },
   "dependencies": {
     "react": "^19.1.0",
