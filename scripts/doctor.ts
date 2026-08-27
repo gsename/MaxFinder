@@ -57,6 +57,22 @@ async function checkNtfy(config: NtfyConfig | null): Promise<void> {
   line(OK, `topic present (${masked(config.topic)})`)
   line(OK, `serveur ${config.server}${config.token ? ' (jeton fourni)' : ''}`)
 
+  // ntfy n accepte que lettres, chiffres, tiret et souligne. Un nom invalide
+  // renvoie un 404 "page not found", message qui n aide en rien a comprendre.
+  if (!/^[-_A-Za-z0-9]{1,64}$/.test(config.topic)) {
+    line(KO, 'nom de topic invalide : seuls les lettres, chiffres, "-" et "_" sont acceptes.')
+    line(KO, 'Ni point, ni espace, ni accent. ntfy repondrait un 404 trompeur.')
+    todo.push('Choisissez un topic compose uniquement de [A-Z a-z 0-9 - _], 64 caracteres au plus.')
+    return
+  }
+  console.log(
+    [
+      '     Rappel : le topic est sensible a la casse. "MonTopic" et "montopic" sont',
+      '     deux sujets differents (verifie sur ntfy.sh).',
+      '     Le nom d affichage dans l application est purement local, sans aucun effet.',
+    ].join('\n'),
+  )
+
   console.log('\n2. Livraison reelle d un message')
   const marker = `maxfinder-doctor-${Date.now().toString(36)}`
   try {
@@ -73,6 +89,12 @@ async function checkNtfy(config: NtfyConfig | null): Promise<void> {
     })
     if (!res.ok) {
       line(KO, `publication refusee : HTTP ${res.status} ${res.statusText} — ${await res.text()}`)
+      if (res.status === 404) {
+        line(KO, 'Un 404 sur ntfy signale presque toujours un nom de topic invalide.')
+      }
+      if (res.status === 401 || res.status === 403) {
+        line(KO, 'Topic protege : renseignez NTFY_TOKEN.')
+      }
       return
     }
     line(OK, 'message publie')
@@ -91,8 +113,11 @@ async function checkNtfy(config: NtfyConfig | null): Promise<void> {
   try {
     let messages: Array<{ event?: string; message?: string; title?: string }> = []
     let found: { title?: string } | undefined
-    for (let attempt = 0; attempt < 6 && !found; attempt++) {
-      if (attempt > 0) await new Promise((r) => setTimeout(r, 800))
+    // Mesure faite sur ntfy.sh : le message peut mettre plus de deux secondes a
+    // apparaitre dans le cache. Un budget trop court produirait une fausse
+    // alerte, et enverrait chercher un probleme qui n existe pas.
+    for (let attempt = 0; attempt < 10 && !found; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 1200))
       const res = await fetch(`${config.server}/${config.topic}/json?poll=1`, {
         headers: config.token ? { Authorization: `Bearer ${config.token}` } : {},
       })
@@ -112,7 +137,11 @@ async function checkNtfy(config: NtfyConfig | null): Promise<void> {
           `     topic exact, ou testez dans un navigateur sur ${config.server}/${config.topic}`,
       )
     } else {
-      line(WARN, 'message publie mais introuvable a la relecture (cache desactive ?)')
+      line(
+        WARN,
+        'message publie et accepte, mais pas encore visible dans le cache apres 11 s.' +
+          ' Verifiez directement dans l application ou sur le navigateur.',
+      )
     }
   } catch (error) {
     line(WARN, `relecture impossible : ${String(error)}`)

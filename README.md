@@ -116,6 +116,12 @@ Les deux causes les plus fréquentes ne sont pas des pannes :
 | Le run est vert, rien n'est parti | Aucune règle `enabled: true`, ou dataset inchangé donc arrêt immédiat |
 | `doctor` est tout vert, le téléphone reste muet | Le secret dit *où publier*, il ne vous **abonne** à rien |
 | Une règle surveille 0 trajet | Normal : l'alerte existe pour vous prévenir quand cela changera |
+| ntfy répond `404 page not found` | Nom de topic invalide, pas un topic manquant |
+
+**Le topic est sensible à la casse** (vérifié sur ntfy.sh : `MonTopic` et `montopic` sont deux
+sujets distincts). Il ne doit contenir que des lettres, chiffres, `-` et `_` — ni point, ni
+espace, ni accent, sous peine d'un `404` peu explicite. Le **nom d'affichage** que propose
+l'application ntfy est purement local et cosmétique : seule l'URL compte.
 
 Pour forcer une exécution complète : `Actions → Run workflow`, cocher **`force`**. Sans cette
 case, un dataset inchangé fait sortir le job immédiatement — c'est voulu, et cela ressemble à une
