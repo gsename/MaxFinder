@@ -90,7 +90,19 @@ watches:
     enabled: true
 ```
 
-Vérifiez avant de pousser : `npm run watches:check`.
+Vérifiez avant de pousser :
+
+```bash
+npm run watches:check     # syntaxe et schéma seulement
+npm run watches:preview   # ce que chaque règle enverrait, sur les données locales
+```
+
+`watches:preview` répond à la vraie question — « cette règle va-t-elle déclencher, et sur
+quoi ? ». Il liste les dates surveillées, les trajets qui correspondent déjà, et signale les
+gares introuvables ou une règle qui ne pourrait jamais déclencher.
+
+> **Le secret `NTFY_TOPIC` ne vous abonne à rien.** Il indique seulement au workflow *où*
+> publier. Sans abonnement au même topic dans l'application ntfy, le message part dans le vide.
 
 ### 5. Premier run
 
@@ -157,6 +169,12 @@ Le commit quotidien de `state/` vise à l'éviter. GitHub prévient par courriel
 et la réactivation se fait en un clic depuis l'onglet Actions — surveillez ce courriel plutôt que
 de considérer le problème comme définitivement réglé.
 
+**L'état des alertes est enregistré avant le déploiement**, pas après. Si une étape ultérieure
+échoue, GitHub saute les suivantes : enregistrer l'état en fin de job signifierait ne jamais le
+persister, donc réémettre les mêmes alertes à chaque run. Contrepartie assumée : un échec de
+déploiement laisse le site en retard jusqu'à la publication SNCF suivante, ou jusqu'à un run
+manuel avec `force`.
+
 **Une place affichée peut déjà être partie.** Le dataset est un instantané publié une fois par
 matin ; seule la réservation fait foi.
 
@@ -180,6 +198,7 @@ jamais de conversion de fuseau ; seul le cron est en UTC.
 | `scripts/build-data.ts` | Construction des fichiers statiques |
 | `scripts/sync.ts` | Orchestrateur appelé par GitHub Actions |
 | `scripts/query.ts` | CLI d'interrogation locale |
+| `scripts/watch-preview.ts` | Prévisualisation des alertes sans rien envoyer |
 | `src/` | Interface React |
 
 `shared/watch.ts` est délibérément commun aux deux mondes : la même fonction décide ce qu'une

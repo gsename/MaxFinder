@@ -73,6 +73,30 @@ jobs:
           fi
           npx tsx scripts/sync.ts $FORCE
 
+      # Persiste l etat AVANT le deploiement, et non apres : les notifications
+      # viennent de partir, et si une etape ulterieure echoue (Pages mal
+      # configure, par exemple) GitHub saute les etapes suivantes. L etat ne
+      # serait alors jamais enregistre et chaque run reenverrait les memes
+      # alertes indefiniment.
+      #
+      # Ce commit quotidien tient aussi lieu d activite sur le depot, ce qui
+      # repousse la desactivation automatique des workflows planifies au bout
+      # de 60 jours.
+      - name: Commit de l etat des alertes
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add state/
+          if git diff --cached --quiet; then
+            echo 'Etat inchange, rien a committer.'
+            exit 0
+          fi
+          git commit -m 'chore(state): synchronisation TGVmax [skip ci]'
+          # Une autre execution peut avoir pousse entre-temps.
+          git pull --rebase --autostash origin ${{ github.ref_name }}
+          git push
+
       # Rejoue le test de rendu, cette fois sur les donnees fraichement
       # telechargees : en CI de PR il s ignore, faute de fichiers a lire.
       - name: Test de rendu sur les donnees reelles
@@ -103,21 +127,3 @@ jobs:
         id: deploy
         if: steps.sync.outputs.changed == 'true'
         uses: actions/deploy-pages@v4
-
-      # Le fichier d etat porte les cles deja notifiees. Son commit quotidien
-      # tient aussi lieu d activite sur le depot, ce qui repousse la
-      # desactivation automatique des workflows planifies au bout de 60 jours.
-      - name: Commit de l etat
-        if: steps.sync.outputs.changed == 'true'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add state/
-          if git diff --cached --quiet; then
-            echo 'Etat inchange, rien a committer.'
-            exit 0
-          fi
-          git commit -m 'chore(state): synchronisation TGVmax [skip ci]'
-          # Une autre execution peut avoir pousse entre-temps.
-          git pull --rebase --autostash origin ${{ github.ref_name }}
-          git push
