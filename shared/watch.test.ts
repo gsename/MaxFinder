@@ -3,7 +3,14 @@ import { addDays, todayInParis, weekdayOf } from './dates'
 import { buildPlaceIndex, normalizeStationName } from './places'
 import { parseHm } from './time'
 import type { Station, Trip } from './types'
-import { datesForWatch, defaultWatchRule, matchWatch, resolvePlaceNames, type WatchRule } from './watch'
+import {
+  datesForWatch,
+  defaultWatchRule,
+  describeWatchWindow,
+  matchWatch,
+  resolvePlaceNames,
+  type WatchRule,
+} from './watch'
 
 const NAMES = ['BORDEAUX ST JEAN', 'MASSY TGV', 'PARIS (intramuros)', 'POITIERS']
 const stations: Station[] = NAMES.map((name, i) => ({
@@ -141,5 +148,58 @@ describe('matchWatch', () => {
     expect(new Set(keys).size).toBe(keys.length)
     expect(keys.some((k) => k.startsWith('2026-08-29'))).toBe(true)
     expect(keys.some((k) => k.startsWith('2026-08-30'))).toBe(true)
+  })
+})
+
+describe('describeWatchWindow', () => {
+  // Fenetre publiee de 31 jours, comme celle du dataset reel.
+  const dates = Array.from({ length: 31 }, (_, i) => addDays('2026-08-27', i))
+  const today = '2026-08-27'
+  const dateRule = (from: string, to = from) =>
+    rule({ relativeDays: undefined, dateFrom: from, dateTo: to })
+
+  it('reconnait une date presente dans la fenetre', () => {
+    const window = describeWatchWindow(dateRule('2026-09-12'), dates, today)
+    expect(window.kind).toBe('active')
+    if (window.kind === 'active') expect(window.dates).toEqual(['2026-09-12'])
+  })
+
+  it('distingue une date encore non publiee d une regle morte', () => {
+    // Le cas courant : un voyage prepare deux mois a l avance. La regle est
+    // correcte, la SNCF n a simplement pas encore publie la date.
+    const window = describeWatchWindow(dateRule('2026-10-24'), dates, today)
+    expect(window.kind).toBe('future')
+    if (window.kind === 'future') {
+      expect(window.target).toBe('2026-10-24')
+      // Dernier jour publie = J+30, donc le 24/10 apparaitra 30 jours avant.
+      expect(window.publishedOn).toBe('2026-09-24')
+      expect(window.inDays).toBe(28)
+    }
+  })
+
+  it('signale une date sortie de la fenetre', () => {
+    const window = describeWatchWindow(dateRule('2026-07-01'), dates, today)
+    expect(window.kind).toBe('past')
+    if (window.kind === 'past') expect(window.target).toBe('2026-07-01')
+  })
+
+  it('signale des criteres qui ne se recoupent jamais', () => {
+    // Le 12 septembre 2026 est un samedi : exiger un lundi ne donne rien.
+    const impossible = rule({
+      relativeDays: undefined,
+      dateFrom: '2026-09-12',
+      dateTo: '2026-09-12',
+      weekdays: ['mon'],
+    })
+    expect(describeWatchWindow(impossible, dates, today).kind).toBe('filtered')
+  })
+
+  it('la date limite de la fenetre est active, pas future', () => {
+    const last = dates[dates.length - 1]!
+    expect(describeWatchWindow(dateRule(last), dates, today).kind).toBe('active')
+  })
+
+  it('une fenetre glissante reste active', () => {
+    expect(describeWatchWindow(rule({ relativeDays: [0, 31] }), dates, today).kind).toBe('active')
   })
 })

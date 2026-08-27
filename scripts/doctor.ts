@@ -19,7 +19,7 @@ import { todayInParis } from '../shared/dates'
 import { buildPlaceIndex } from '../shared/places'
 import { decodeDayTrips } from '../shared/search'
 import type { DataIndex, Station, Trip, TripsFile } from '../shared/types'
-import { datesForWatch, matchWatch } from '../shared/watch'
+import { describeWatchWindow, matchWatch } from '../shared/watch'
 import { ntfyConfigFromEnv, type NtfyConfig } from './notify-ntfy'
 import { loadWatches, WatchesError } from './watches'
 
@@ -210,7 +210,8 @@ async function main(): Promise<number> {
   let totalMatches = 0
   for (const rule of actives) {
     const result = matchWatch(rule, days, placeIndex, today)
-    const dates = datesForWatch(rule, index.dates, today)
+    const window = describeWatchWindow(rule, index.dates, today)
+    const dates = window.kind === 'active' ? window.dates : []
     totalMatches += result.itineraries.length
 
     for (const item of result.unresolved) {
@@ -218,8 +219,21 @@ async function main(): Promise<number> {
       line(KO, `"${rule.name}" : gare "${item.input}" introuvable.${hint}`)
       todo.push(`Corrigez le nom de gare "${item.input}" dans watches.yml.`)
     }
-    if (dates.length === 0) {
-      line(KO, `"${rule.name}" : aucune date surveillee, elle ne declenchera jamais.`)
+    if (window.kind === 'future') {
+      line(
+        OK,
+        `"${rule.name}" : date ${window.target} pas encore publiee par la SNCF,` +
+          ` la regle s activera vers le ${window.publishedOn}. Rien a corriger.`,
+      )
+      continue
+    }
+    if (window.kind === 'past') {
+      line(KO, `"${rule.name}" : le ${window.target} est sorti de la fenetre, elle est morte.`)
+      todo.push(`Supprimez ou redatez la regle "${rule.name}".`)
+      continue
+    }
+    if (window.kind === 'filtered') {
+      line(KO, `"${rule.name}" : bornes de dates et jours de semaine incompatibles.`)
       todo.push(`Revoyez le bloc "dates" de la regle "${rule.name}".`)
       continue
     }

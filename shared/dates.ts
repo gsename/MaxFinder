@@ -54,3 +54,13 @@ export function formatDateLabel(isoDate: string): string {
     timeZone: 'UTC',
   }).format(new Date(Date.UTC(y, m - 1, d)))
 }
+
+/** Nombre de jours civils de `from` a `to` (negatif si `to` precede `from`). */
+export function daysBetween(from: string, to: string): number {
+  const parse = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number)
+    if (!y || !m || !d) throw new Error(`Date invalide: "${iso}"`)
+    return Date.UTC(y, m - 1, d)
+  }
+  return Math.round((parse(to) - parse(from)) / 86_400_000)
+}

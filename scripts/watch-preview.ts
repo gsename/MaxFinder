@@ -16,7 +16,7 @@ import { buildPlaceIndex, stationLabel } from '../shared/places'
 import { decodeDayTrips } from '../shared/search'
 import { formatArrival, formatDuration, formatHm } from '../shared/time'
 import type { DataIndex, Station, Trip, TripsFile } from '../shared/types'
-import { datesForWatch, matchWatch } from '../shared/watch'
+import { describeWatchWindow, matchWatch } from '../shared/watch'
 import { loadWatches, WatchesError } from './watches'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -85,7 +85,8 @@ async function main(): Promise<number> {
       console.log(`  PROBLEME gare "${item.input}" introuvable. ${hint}`)
     }
 
-    const dates = datesForWatch(rule, index.dates, today)
+    const window = describeWatchWindow(rule, index.dates, today)
+    const dates = window.kind === 'active' ? window.dates : []
     const jours = rule.weekdays?.length
       ? rule.weekdays.map((k) => weekdayLabel(k)).join(', ')
       : 'tous les jours'
@@ -99,8 +100,32 @@ async function main(): Promise<number> {
         `, priorite ntfy ${rule.priority}`,
     )
 
-    if (dates.length === 0) {
-      console.log('  ATTENTION  aucune date surveillee : cette regle ne declenchera jamais.')
+    if (window.kind === 'future') {
+      // Cas normal d un voyage prepare longtemps a l avance : la regle est
+      // correcte, la SNCF n a simplement pas encore publie cette date.
+      console.log(
+        `  EN ATTENTE la SNCF n a pas encore publie le ${window.target}.
+` +
+          `             Cette regle s activera d elle-meme vers le ${window.publishedOn}` +
+          ` (dans ${window.inDays} jour${window.inDays > 1 ? 's' : ''}).
+` +
+          '             Rien a corriger : laissez-la en place.',
+      )
+      continue
+    }
+    if (window.kind === 'past') {
+      console.log(
+        `  ATTENTION  le ${window.target} est sorti de la fenetre publiee :` +
+          ' cette regle ne declenchera plus. Supprimez-la ou changez sa date.',
+      )
+      problems++
+      continue
+    }
+    if (window.kind === 'filtered') {
+      console.log(
+        '  ATTENTION  aucune date surveillee : les bornes de dates et les jours de' +
+          ' semaine choisis ne se recoupent jamais.',
+      )
       problems++
       continue
     }

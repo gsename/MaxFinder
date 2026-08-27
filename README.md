@@ -90,6 +90,36 @@ watches:
     enabled: true
 ```
 
+#### Surveiller une date précise
+
+Remplacez `relative_days` par des bornes absolues. Pour un seul jour, mettez la même date des
+deux côtés :
+
+```yaml
+  - name: "Toulouse vers Paris le 24 octobre"
+    from: ["TOULOUSE MATABIAU"]
+    to: ["PARIS (intramuros)"]
+    dates:
+      from: "2026-10-24"
+      to: "2026-10-24"
+    depart_between: ["15:00", "21:00"]
+    max_changes: 1
+    priority: 5
+    enabled: true
+```
+
+La SNCF ne publiant que **31 jours glissants**, une date plus lointaine n'est pas encore
+consultable : la règle ne surveille rien *pour l'instant* et s'activera d'elle-même quand la
+fenêtre l'atteindra. `watches:preview` le dit explicitement au lieu de crier à l'erreur :
+
+```
+EN ATTENTE la SNCF n a pas encore publie le 2026-10-24.
+           Cette regle s activera d elle-meme vers le 2026-09-24 (dans 28 jours).
+           Rien a corriger : laissez-la en place.
+```
+
+Une fois la date passée, la règle s'éteint seule — et l'outil vous invite alors à la supprimer.
+
 Vérifiez avant de pousser :
 
 ```bash

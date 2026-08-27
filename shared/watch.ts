@@ -1,4 +1,4 @@
-import { addDays, weekdayOf, type WeekdayKey } from './dates'
+import { addDays, daysBetween, weekdayOf, type WeekdayKey } from './dates'
 import { lookupPlace, type PlaceIndex } from './places'
 import { buildDayGraph, findItineraries, DEFAULT_SEARCH_OPTIONS, type SearchOptions } from './search'
 import type { Itinerary, StationId, Trip } from './types'
@@ -64,8 +64,11 @@ export function resolvePlaceNames(index: PlaceIndex, names: string[]): ResolvedP
   return { stations: [...new Set(stations)], unresolved }
 }
 
-/** Dates du dataset retenues par la regle. */
-export function datesForWatch(rule: WatchRule, availableDates: string[], today: string): string[] {
+/** Bornes absolues effectives de la regle, contraintes relatives resolues. */
+export function watchDateBounds(
+  rule: WatchRule,
+  today: string,
+): { lower?: string; upper?: string } {
   let lower = rule.dateFrom
   let upper = rule.dateTo
 
@@ -76,6 +79,13 @@ export function datesForWatch(rule: WatchRule, availableDates: string[], today: 
     lower = lower && lower > relLower ? lower : relLower
     upper = upper && upper < relUpper ? upper : relUpper
   }
+
+  return { lower, upper }
+}
+
+/** Dates du dataset retenues par la regle. */
+export function datesForWatch(rule: WatchRule, availableDates: string[], today: string): string[] {
+  const { lower, upper } = watchDateBounds(rule, today)
 
   return availableDates.filter((date) => {
     if (lower && date < lower) return false
@@ -164,4 +174,44 @@ export function defaultWatchRule(): WatchRule {
     maxConnectionWait: DEFAULT_SEARCH_OPTIONS.maxConnectionWait,
     priority: 4,
   }
+}
+
+/**
+ * Etat de la fenetre d une regle, pour un diagnostic honnete.
+ *
+ * Une regle visant une date au-dela des 31 jours publies ne surveille rien
+ * *encore* : elle s activera quand la fenetre glissante atteindra cette date.
+ * La confondre avec une regle definitivement morte enverrait corriger une
+ * configuration parfaitement correcte — c est le cas courant d un voyage
+ * reserve deux mois a l avance.
+ */
+export type WatchWindow =
+  | { kind: 'active'; dates: string[] }
+  | { kind: 'future'; target: string; publishedOn: string; inDays: number }
+  | { kind: 'past'; target: string }
+  | { kind: 'filtered' }
+
+export function describeWatchWindow(
+  rule: WatchRule,
+  availableDates: string[],
+  today: string,
+): WatchWindow {
+  const dates = datesForWatch(rule, availableDates, today)
+  if (dates.length > 0) return { kind: 'active', dates }
+
+  const first = availableDates[0]
+  const last = availableDates[availableDates.length - 1]
+  if (!first || !last) return { kind: 'filtered' }
+
+  const { lower, upper } = watchDateBounds(rule, today)
+
+  if (lower && lower > last) {
+    // La fenetre avance d un jour par jour : la date sera publiee quand
+    // l ecart avec aujourd hui tombera sous la profondeur de la fenetre.
+    const depth = daysBetween(today, last)
+    const inDays = Math.max(0, daysBetween(today, lower) - depth)
+    return { kind: 'future', target: lower, publishedOn: addDays(today, inDays), inDays }
+  }
+  if (upper && upper < first) return { kind: 'past', target: upper }
+  return { kind: 'filtered' }
 }
