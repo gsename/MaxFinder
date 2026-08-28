@@ -124,15 +124,25 @@ describe("rendu de l'application", () => {
     45000,
   )
 
-  it('annonce clairement l absence de resultat sur une liaison fermee', async () => {
-    if (!dataAvailable) return
-    // Deux petites gares sans liaison directe entre elles.
-    window.history.replaceState(null, '', '/?de=orthez&vers=vitre&quand=window')
-    render(<App />)
-    await waitFor(() => expect(screen.getByText(/Aucun trajet sur cette liaison/i)).toBeTruthy(), {
-      timeout: 20000,
-    })
-  })
+  it(
+    'explique une absence de resultat au lieu de laisser croire a une panne',
+    async () => {
+      if (!dataAvailable) return
+      // Deux petites gares sans liaison directe entre elles.
+      window.history.replaceState(null, '', '/?de=orthez&vers=vitre&quand=window')
+      render(<App />)
+      await waitFor(
+        () => expect(screen.getByText(/Aucune place TGVmax sur cette liaison/i)).toBeTruthy(),
+        { timeout: 20000 },
+      )
+      // Le point essentiel : une liste vide ne veut pas dire qu aucun train ne
+      // circule, seulement qu aucune place MAX n est ouverte. Sans cette
+      // precision, le site passe pour casse.
+      expect(screen.getByText(/n affiche que ceux dont/i)).toBeTruthy()
+      expect(screen.getByText(/jamais l horaire complet/i)).toBeTruthy()
+    },
+    30000,
+  )
 
   it('signale une erreur exploitable quand les donnees manquent', async () => {
     vi.stubGlobal('fetch', () => Promise.resolve(new Response('nope', { status: 404 })))

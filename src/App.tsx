@@ -133,8 +133,10 @@ export default function App() {
       <header className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">MaxFinder</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Les trains TGV INOUI et INTERCITES ouverts aux pass MAX JEUNE et MAX SENIOR, sur les{' '}
-          {core.index.dates.length} prochains jours. Correspondances incluses.
+          Uniquement les trains dont une place est <strong>ouverte aux pass MAX JEUNE et MAX
+          SENIOR</strong>, sur les {core.index.dates.length} prochains jours. Correspondances
+          incluses. Ce n est pas l horaire complet : un train absent d ici circule peut-etre, mais
+          sans place MAX disponible.
         </p>
       </header>
 
@@ -180,10 +182,19 @@ export default function App() {
             </div>
 
             {itineraries.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                Aucun trajet sur cette liaison avec ces criteres.
-                {query.maxChanges === 0 && ' Essayez d autoriser une correspondance.'}
-              </p>
+              <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm dark:border-slate-700">
+                <p className="text-slate-600 dark:text-slate-300">
+                  Aucune place TGVmax sur cette liaison avec ces criteres.
+                  {query.maxChanges === 0 && ' Essayez d autoriser une correspondance.'}
+                </p>
+                {/* Sans cette precision, un site vide passe pour casse alors que des
+                    trains circulent bel et bien : ils sont simplement complets. */}
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Des trains circulent probablement quand meme. MaxFinder n affiche que ceux dont
+                  une place est <strong>ouverte aux pass MAX</strong>, jamais l horaire complet :
+                  pour celui-ci, voyez SNCF Connect.
+                </p>
+              </div>
             ) : (
               <Results
                 itineraries={shown}
@@ -206,7 +217,9 @@ export default function App() {
           >
             SNCF Voyageurs, dataset tgvmax
           </a>{' '}
-          (licence ODbL), publiees une fois par matin. Instantane du{' '}
+          (licence ODbL), publiees <strong>une fois par matin</strong>. Une place liberee en cours
+          de journee n apparait donc ici qu au lendemain, alors qu elle est deja visible sur SNCF
+          Connect. Instantane du{' '}
           {new Date(core.index.dataset_modified).toLocaleString('fr-FR')}, {core.index.station_count}{' '}
           gares.
         </p>

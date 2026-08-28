@@ -261,6 +261,16 @@ persister, donc réémettre les mêmes alertes à chaque run. Contrepartie assum
 déploiement laisse le site en retard jusqu'à la publication SNCF suivante, ou jusqu'à un run
 manuel avec `force`.
 
+**MaxFinder n'est pas un horaire, c'est une carte des places MAX ouvertes.** Le dataset ne
+contient que les trains ouverts à la réservation MAX (`od_happy_card = OUI`) — 63 000 lignes sur
+394 000. Sur Toulouse → Paris le 30 août, 11 trains circulent et **aucun** n'a de place MAX : SNCF
+Connect en montre donc 11, MaxFinder aucun. Ce n'est pas une lacune, c'est l'objet de l'outil.
+L'interface le dit maintenant explicitement, une liste vide passant sinon pour une panne.
+
+**Le dataset est un instantané quotidien, SNCF Connect est en direct.** Une place libérée à 10 h
+apparaît immédiatement sur SNCF Connect et seulement le lendemain matin ici. C'est la limite dure
+de cette source : aucun travail applicatif ne la contourne.
+
 **Une place affichée peut déjà être partie.** Le dataset est un instantané publié une fois par
 matin ; seule la réservation fait foi.
 
