@@ -183,7 +183,17 @@ async function main(): Promise<number> {
     console.log(`    notification envoyee (${diff.fresh.length} trajet(s))`)
   }
 
-  if (!flags.dryRun) await saveState(STATE_PATH, nextState)
+  // L'etat ne s'ecrit que si les notifications sont reellement parties.
+  //
+  // Sans cette condition, un `npm run sync:local` marquait tous les trajets
+  // comme deja signales. Ce fichier une fois pousse, la premiere vraie alerte
+  // aurait ete avalee en silence : l'etat aurait affirme « deja notifie » pour
+  // des trajets dont l'abonne n'a jamais entendu parler.
+  if (!flags.dryRun && flags.notify) {
+    await saveState(STATE_PATH, nextState)
+  } else {
+    console.log("Etat non enregistre : execution locale sans envoi de notification.")
+  }
 
   for (const problem of problems) console.warn(`ATTENTION ${problem}`)
 
