@@ -221,6 +221,32 @@ purgées de l'état à chaque run.
 
 ---
 
+## Pourquoi l'app ne réserve pas à votre place
+
+Il n'existe **aucune API publique de réservation** : l'[API SNCF](https://numerique.sncf.com/startup/api/)
+couvre la recherche d'itinéraires et l'open data, et la vente ne passe que par des accords B2B
+revendeurs — qui ne peuvent de toute façon pas poser un billet MAX, lié à un compte personnel.
+
+Réserver automatiquement supposerait donc de piloter SNCF Connect avec un navigateur headless et
+vos identifiants. Trois raisons de ne pas le faire, indépendamment de l'envie :
+
+- **Vos identifiants vivraient dans les secrets d'un dépôt public**, injectés dans un job qui
+  exécute une centaine de paquets npm. Une seule dépendance transitive compromise exfiltre le
+  login SNCF *et* la carte enregistrée sur le compte.
+- **Les CGU de SNCF Connect interdisent l'accès automatisé**, et le site est protégé contre les
+  robots. Le risque encouru est la suspension du compte, donc la perte de l'abonnement MAX —
+  incomparablement plus coûteuse que le confort gagné.
+- **Un robot de réservation qui échoue en silence est pire que pas de robot** : on se croit
+  réservé, on ne l'est pas, et on le découvre en gare.
+
+Le parti retenu est donc de rendre la réservation manuelle *quasi instantanée* : la notification
+porte deux boutons, « Voir le trajet » qui ouvre le site sur la recherche exacte (bonnes gares,
+bonne date) et « Réserver » vers SNCF Connect. Deux touches depuis le téléphone, sans rien
+resaisir.
+
+`SITE_URL` est déduit automatiquement de l'URL Pages du dépôt ; définissez la variable de dépôt du
+même nom seulement pour un domaine personnalisé.
+
 ## Points d'exploitation
 
 **Les workflows planifiés sont désactivés après 60 jours d'inactivité** sur un dépôt public

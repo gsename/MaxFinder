@@ -179,7 +179,7 @@ async function main(): Promise<number> {
       problems.push(`NTFY_TOPIC absent : ${diff.fresh.length} nouveaute(s) non notifiee(s) pour "${rule.name}".`)
       continue
     }
-    await notifyWatch(ntfy, diff, build.stations, siteUrl)
+    await notifyWatch(ntfy, diff, placeIndex, siteUrl)
     console.log(`    notification envoyee (${diff.fresh.length} trajet(s))`)
   }
 

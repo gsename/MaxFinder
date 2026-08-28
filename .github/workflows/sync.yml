@@ -59,7 +59,9 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
-          SITE_URL: ${{ vars.SITE_URL }}
+          # Sans variable definie, on deduit l URL Pages du depot : les boutons
+          # des notifications doivent fonctionner sans configuration en plus.
+          SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
         run: |
           if [ "${{ inputs.notify_test }}" = "true" ]; then
             npx tsx scripts/sync.ts --notify-test

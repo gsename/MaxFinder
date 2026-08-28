@@ -1,4 +1,6 @@
 import { formatDateLabel } from '../shared/dates'
+import { itineraryUrl, SNCF_CONNECT_URL } from '../shared/deeplink'
+import type { PlaceIndex } from '../shared/places'
 import { formatArrival, formatDuration, formatHm } from '../shared/time'
 import type { Itinerary, Station } from '../shared/types'
 import type { WatchDiff } from './state'
@@ -66,15 +68,45 @@ function describeItinerary(it: Itinerary, stations: Station[]): string {
 /** Nombre d itineraires detailles par notification, au-dela on resume. */
 const MAX_DETAILED = 12
 
+/**
+ * Boutons d action de la notification.
+ *
+ * ntfy attend une liste « type, libelle, cible » separee par des points-virgules.
+ * C est tout l interet pratique du dispositif : une place TGVmax se reprend en
+ * quelques minutes, et resaisir gares et date sur un telephone coute justement
+ * ces minutes-la.
+ */
+function actionsHeader(itinerary: Itinerary, index: PlaceIndex, siteUrl?: string): string {
+  const actions: string[] = []
+  if (siteUrl) {
+    const first = itinerary.legs[0]!
+    const last = itinerary.legs[itinerary.legs.length - 1]!
+    const fromPlace = index.places[index.placeOf[first.origin] ?? -1]
+    const toPlace = index.places[index.placeOf[last.dest] ?? -1]
+    if (fromPlace && toPlace) {
+      const url = itineraryUrl(siteUrl, {
+        fromSlug: fromPlace.slug,
+        toSlug: toPlace.slug,
+        date: itinerary.date,
+        maxChanges: Math.min(2, itinerary.changes) as 0 | 1 | 2,
+      })
+      actions.push(`view, Voir le trajet, ${url}, clear=true`)
+    }
+  }
+  actions.push(`view, Reserver, ${SNCF_CONNECT_URL}`)
+  return actions.join('; ')
+}
+
 export async function notifyWatch(
   config: NtfyConfig,
   diff: WatchDiff,
-  stations: Station[],
+  index: PlaceIndex,
   siteUrl: string | undefined,
 ): Promise<void> {
   const count = diff.fresh.length
   if (count === 0) return
 
+  const stations: Station[] = index.stations
   const shown = diff.fresh.slice(0, MAX_DETAILED)
   const lines = shown.map((it) => describeItinerary(it, stations))
   if (count > shown.length) {
@@ -88,6 +120,9 @@ export async function notifyWatch(
     Title: encodeHeader(title),
     Priority: String(diff.rule.priority),
     Tags: 'train,tgvmax',
+    // Le trajet le mieux classe sert de cible aux boutons : c est celui que
+    // l abonne voudra ouvrir en premier.
+    Actions: actionsHeader(diff.fresh[0]!, index, siteUrl),
   }
   if (siteUrl) headers.Click = siteUrl
 
